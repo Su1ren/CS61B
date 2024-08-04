@@ -97,7 +97,7 @@ public class Model extends Observable {
 
     /**
      *  How to process the tilt?
-     *  We can divide the move and merge into two steps:
+     *  We can divide the move and merge into three steps:
      *  1. First move the non-empty tiles upwards to the top.
      *  2. Then merge the tiles from the top to the bottom if possible.
      *  3. After merging, move the non-empty tiles upwards again.
