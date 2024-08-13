@@ -69,7 +69,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
      * 2. Shrink the capacity.
      * @param capacity the new capacity of deque
      */
-    public void resize(int capacity) {
+    private void resize(int capacity) {
         T[] a = (T[]) new Object[capacity];
 
         System.arraycopy(_items, _front, a, (capacity - _size) / 2, _size);
