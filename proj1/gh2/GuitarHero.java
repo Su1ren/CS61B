@@ -4,7 +4,7 @@ import edu.princeton.cs.algs4.StdAudio;
 import edu.princeton.cs.algs4.StdDraw;
 
 public class GuitarHero {
-    private static final String keyboard = "q2we4r5ty7u8i9op-[=zxdcfvgbnjmk,.;'";
+    private static final String KEYBOARD = "q2we4r5ty7u8i9op-[=zxdcfvgbnjmk,.;'";
     private static final double CONCERT_A = 440.0;
 
     private static double getFrequency(int index) {
@@ -12,16 +12,16 @@ public class GuitarHero {
     }
 
     public static void main(String[] args) {
-        GuitarString[] guitarStrings = new GuitarString[keyboard.length()];
+        GuitarString[] guitarStrings = new GuitarString[KEYBOARD.length()];
 
-        for (int i = 0; i < keyboard.length(); ++i) {
+        for (int i = 0; i < KEYBOARD.length(); ++i) {
             guitarStrings[i] = new GuitarString(getFrequency(i));
         }
 
         while (true) {
             if (StdDraw.hasNextKeyTyped()) {
                 char key = StdDraw.nextKeyTyped();
-                int index = keyboard.indexOf(key);
+                int index = KEYBOARD.indexOf(key);
                 if (index >= 0) {
                     guitarStrings[index].pluck();
                 }

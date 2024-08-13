@@ -2,8 +2,6 @@ package gh2;
 
 import deque.Deque;
 import deque.LinkedListDeque;
-import edu.princeton.cs.introcs.StdAudio;
-import org.junit.Test;
 
 /**
  * &#064;source gh2/GuitarString.java
@@ -22,7 +20,7 @@ public class Harp {
     /* Create a guitar string of the given frequency.  */
     public Harp(double frequency) {
         buffer = new LinkedListDeque<Double>();
-        for (int i = 0; i < 2 * (int)Math.round(SR / frequency); ++i) {
+        for (int i = 0; i < 2 * (int) Math.round(SR / frequency); ++i) {
             buffer.addFirst(0.0);
         }
     }
@@ -53,5 +51,4 @@ public class Harp {
     public double sample() {
         return buffer.get(0);
     }
-
 }

@@ -35,12 +35,13 @@ public class MaxArrayDeque<T> extends ArrayDeque<T> {
      * @return the max item under the criteria of c, null if the deque is empty
      */
     public T max(Comparator<T> c) {
-        if(isEmpty())
+        if(isEmpty()) {
             return null;
+        }
 
         int idx = 0;
-        for(int i = 1; i < size(); i++) {
-            if(c.compare(get(i), get(idx)) > 0) {
+        for (int i = 1; i < size(); i++) {
+            if (c.compare(get(i), get(idx)) > 0) {
                 idx = i;
             }
         }
