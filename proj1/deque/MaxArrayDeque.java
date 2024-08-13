@@ -35,7 +35,7 @@ public class MaxArrayDeque<T> extends ArrayDeque<T> {
      * @return the max item under the criteria of c, null if the deque is empty
      */
     public T max(Comparator<T> c) {
-        if(isEmpty()) {
+        if (isEmpty()) {
             return null;
         }
 

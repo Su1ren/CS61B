@@ -160,7 +160,7 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
      * @return null if no such item
      */
     public T getRecursive(int index) {
-        if(index < 0 || index >= _size) {
+        if (index < 0 || index >= _size) {
             return null;
         }
         return getRecursiveHelper(_sentinel.next, index);
@@ -206,20 +206,23 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof LinkedListDeque)) {
+        if (!(o instanceof Deque)) {
             return false;
         }
         if (o == this) {
             return true;
         }
 
-        LinkedListDeque<?> other = (LinkedListDeque<?>) o;
+        Deque<?> other = (Deque<?>) o;
         if (other.size() != this.size()) {
             return false;
         }
 
         for (int i = 0; i < _size; ++i) {
-            if (this.get(i) != other.get(i)) {
+//            if (this.get(i) != other.get(i)) { // basic equality check
+//                return false;
+//            }
+            if (!(this.get(i).equals(other.get(i)))) { // deep equality check
                 return false;
             }
         }

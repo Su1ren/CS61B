@@ -141,11 +141,36 @@ public class ArrayDequeTest {
     @Test
     public void recastError() {
         ArrayDeque<Integer> ad1 = new ArrayDeque<>();
-        ad1.addFirst(0);
-        ad1.isEmpty();
-        ad1.addFirst(2);
+        ad1.addLast(0);
         ad1.removeFirst();
-        ad1.addLast(4);
+        ad1.addFirst(2);
+        ad1.addLast(3);
+        ad1.get(0);
+        ad1.addLast(5);
+        ad1.removeLast();
+        ad1.addFirst(7);
+        ad1.removeFirst();
+        ad1.removeLast();
+        ad1.addFirst(10);
+        ad1.removeLast();
+        ad1.addFirst(12);
+        ad1.addFirst(13);
+        ad1.get(2);
+        ad1.removeLast();
+        ad1.removeLast();
+        ad1.addFirst(17);
+    }
+
+    @Test
+    public void testEquality() {
+        LinkedListDeque<Integer> lld = new LinkedListDeque<>();
+        ArrayDeque<Integer> ad = new ArrayDeque<>();
+        for (int i = 0; i < 100; ++i) {
+            lld.addLast(i);
+            ad.addLast(i);
+        }
+
+        assertTrue(lld.equals(ad));
     }
 }
 

@@ -11,4 +11,5 @@ public interface Deque<T> {
     int size();
     void printDeque();
     T get(int index);
+    boolean equals(Object o);
 }
