@@ -146,7 +146,7 @@ public class Repository {
      * For commit to track, files are stored as blobs in the blobs directory after addition.
      * @param fileName the name of the file to add into the stage area
      */
-    public static void add(String fileName) throws IOException {
+    public static void add(String fileName) {
         File file = join(CWD, fileName);
         if (!file.exists()) {
             throw new GitletException("File does not exist.");
@@ -529,14 +529,18 @@ public class Repository {
      * If the named branch already exists, print error message.
      * @param name the name of the new branch
      */
-    public static void branch(String name) throws IOException {
+    public static void branch(String name) {
         if (plainFilenamesIn(BRANCH_HEADS_DIR).contains(name)) {
             throw new GitletException("A branch with that name already exists.");
         }
 
         File newBranch = join(BRANCH_HEADS_DIR, name);
-        newBranch.createNewFile();
-        writeContents(newBranch, getCurrentCommit().getID());
+        try {
+            newBranch.createNewFile();
+            writeContents(newBranch, getCurrentCommit().getID());
+        } catch (IOException e) {
+            throw error("Cannot create branch.");
+        }
     }
 
     /**
@@ -570,7 +574,7 @@ public class Repository {
      * print "There is an untracked file in the way; delete it, or add and commit it first." And exit.
      * The check should take precedence before anything else. Do not change CWD.
      */
-    public static void checkoutBranch(String branch) throws IOException {
+    public static void checkoutBranch(String branch) {
         if (!plainFilenamesIn(BRANCH_HEADS_DIR).contains(branch)) {
             throw new GitletException("No such branch exists.");
         }
@@ -593,7 +597,7 @@ public class Repository {
     /**
      * Take charge of the files adding, overwriting and removal.
      */
-    private static void checkoutHelper(Commit curCommit, Commit checkoutCommit) throws IOException{
+    private static void checkoutHelper(Commit curCommit, Commit checkoutCommit) {
         StageArea stage = readObject(STAGE_AREA, StageArea.class);
         if (!curCommit.getID().equals(checkoutCommit.getID())) {
             for (String file : checkoutCommit.getTrack().keySet()) {
@@ -613,11 +617,15 @@ public class Repository {
     /**
      * Overwrite a file according to the given blob hash.
      */
-    private static void overwriteFile(String file, String blobHash) throws IOException {
+    private static void overwriteFile(String file, String blobHash) {
         Blob blob = readObject(join(BLOBS_DIR, blobHash), Blob.class);
         File newFile = join(CWD,file);
-        newFile.createNewFile();
-        writeContents(newFile, (Object) blob.getContent());
+        try {
+            newFile.createNewFile();
+            writeContents(newFile, (Object) blob.getContent());
+        } catch (IOException e) {
+            throw error("File creation failed in checkout.");
+        }
     }
 
     /**
@@ -627,7 +635,7 @@ public class Repository {
      * The new version is not staged.
      * If the file doesn't exist in the previous commit, print error message.
      */
-    public static void checkoutFile(String path) throws IOException {
+    public static void checkoutFile(String path) {
         Commit curCommit = getCurrentCommit();
 
         if (!curCommit.getTrack().containsKey(path)) {
@@ -646,7 +654,7 @@ public class Repository {
      * If no commit with that ID exists, print error message.
      * If the file doesn't exist in the given commit, print error message.
      */
-    public static void checkoutFileFromCommit(String commitID, String path) throws IOException {
+    public static void checkoutFileFromCommit(String commitID, String path) {
         if (!plainFilenamesIn(COMMITS_DIR).contains(commitID)) {
             throw new GitletException("No commit with that id exists");
         }
@@ -667,7 +675,7 @@ public class Repository {
      * If a working file is untracked in the current branch and would be overwritten, print:
      * "There is an untracked file in the way; delete it, or add and commit it first" then exit.
      */
-    public static void reset(String commitID) throws IOException {
+    public static void reset(String commitID) {
         if (!plainFilenamesIn(COMMITS_DIR).contains(commitID)) {
             throw new GitletException("No commit with that id exists");
         }
