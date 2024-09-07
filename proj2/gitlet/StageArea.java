@@ -9,8 +9,7 @@ import java.util.Set;
 import java.util.HashSet;
 
 import static gitlet.Repository.STAGE_AREA;
-import static gitlet.Utils.readObject;
-import static gitlet.Utils.writeObject;
+import static gitlet.Utils.*;
 
 public class StageArea implements Serializable {
     /**
@@ -45,10 +44,14 @@ public class StageArea implements Serializable {
      *
      * @param srcFile the source file from working directory.
      */
-    public static void addFile(File srcFile) throws IOException {
+    public static void addFile(File srcFile) {
         if (!stage.exists()) {
-            stage.createNewFile();
-            writeObject(STAGE_AREA, new StageArea());
+            try {
+                stage.createNewFile();
+                writeObject(STAGE_AREA, new StageArea());
+            } catch (IOException e) {
+                throw error("Cannot create stage area file.");
+            }
         }
 
         Blob blob = new Blob(srcFile);
