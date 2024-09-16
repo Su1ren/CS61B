@@ -87,7 +87,7 @@ public class Repository {
      */
     public static void init() {
         if (GITLET_DIR.exists()) {
-            throw new GitletException("A Gitlet version-control system already exists in the current directory.");
+            throw error("A Gitlet version-control system already exists in the current directory.");
         }
 
         GITLET_DIR.mkdir();
@@ -514,11 +514,12 @@ public class Repository {
         for (String path : files) {
             File file = join(CWD, path);
             Blob blob = new Blob(file);
-            if (tracking.containsKey(path) &&
-                    !tracking.get(path).equals(blob.getID()) &&
-                    !stage.getAddStage().containsKey(path)) {
+            if (tracking.containsKey(path)
+                    && !tracking.get(path).equals(blob.getID())
+                    && !stage.getAddStage().containsKey(path)) {
                 q.add(path + " (modified)");
-            } else if (stage.getAddStage().containsKey(path) && !stage.getAddStage().get(path).equals(blob.getID())) {
+            } else if (stage.getAddStage().containsKey(path)
+                    && !stage.getAddStage().get(path).equals(blob.getID())) {
                 q.add(path + " (modified)");
             }
         }
@@ -611,13 +612,15 @@ public class Repository {
      * Take all files in the head commit of the given branch and put them in the CWD.
      * If one file exists in working directory, overwrite it.
      * Then switch the HEAD to the given branch.
-     * Any files tracked in the current branch but not present in the checkout branch will be removed.
+     * Any files tracked in current branch but not present in checkout branch will be removed.
      * After all, the stage will be clear unless the check-out branch is the current branch.
      * 1. If the no branch with that name exists, print error message.
      * 2. If the given branch is the current branch, print error message.
      * 3. If a working file is untracked in the current branch and would be overwritten by checkout,
-     * print "There is an untracked file in the way; delete it, or add and commit it first." And exit.
-     * The check should take precedence before anything else. Do not change CWD.
+     * print "There is an untracked file in the way; delete it, or add and commit it first."
+     * And exit.
+     * The check should take precedence before anything else.
+     * Do not change CWD.
      */
     public static void checkoutBranch(String branch) {
         if (!plainFilenamesIn(BRANCH_HEADS_DIR).contains(branch)) {
@@ -633,7 +636,8 @@ public class Repository {
 
         for (String file : files) {
             if (!curCommit.getTrack().containsKey(file) && checkoutCommit.getTrack().containsKey(file)) {
-                throw new GitletException("There is an untracked file in the way; delete it, or add and commit it first.");
+                throw error("There is an untracked file in the way;" +
+                        " delete it, or add and commit it first.");
             }
         }
         checkoutHelper(curCommit, checkoutCommit);
@@ -664,7 +668,7 @@ public class Repository {
      */
     private static void overwriteFile(String file, String blobHash) {
         Blob blob = readObject(join(BLOBS_DIR, blobHash), Blob.class);
-        File newFile = join(CWD,file);
+        File newFile = join(CWD, file);
         try {
             newFile.createNewFile();
             writeContents(newFile, (Object) blob.getContent());
@@ -729,7 +733,8 @@ public class Repository {
         for (String file : Objects.requireNonNull(plainFilenamesIn(CWD))) {
             if (!curCommit.getTrack().containsKey(file)) {
                 if (dstCommit.getTrack().containsKey(file)) {
-                    throw new GitletException("There is an untracked file in the way; delete it, or add and commit it first");
+                    throw error("There is an untracked file in the way;" +
+                            " delete it, or add and commit it first");
                 } else {
                     rm(file);
                 }
@@ -744,20 +749,28 @@ public class Repository {
      * If the split point is the same commit as the given branch, do nothing.
      * If the split point is the current branch, then checkout to the given branch.
      * Otherwise, do the merge as below:<br>
-     * 1. If a file is modified in the given branch but not in the current branch, checkout to the given branch.<br>
-     * 2. If a file has been modified in the current branch but not in the given branch, remain in the current branch.<br>
-     * 3. If a file has been modified since split point in the same way (deleted or the same content) in both branches, leave them unchanged.<br>
-     * 4. If a file has been modified differently in the given branch and the current branch (one changed, another deleted),
+     * 1. If a file is modified in the given branch but not in the current branch,
+     *    checkout to the given branch.<br>
+     * 2. If a file has been modified in the current branch but not in the given branch,
+     *    remain in the current branch.<br>
+     * 3. If a file has been modified since split point in the same way (deleted or same content)
+     *    in both branches, leave them unchanged.<br>
+     * 4. If a file has been modified differently in given branch and current branch
+     *    (one changed, another deleted),
      *    replace the contents of the conflicted file with:<br>
      *    <<<<<<< HEAD<br>
      *    contents of file in current branch<br>
      *    =======<br>
      *    contents of file in given branch<br>
      *    >>>>>>><br>
-     * 5. If a file was not present at the split point and present only in the current branch, remain as they are.<br>
-     * 6. If a file was not present at the split point and present only in the given branch, checkout it and stage.<br>
-     * 7. If a file was present at split point and unmodified in the current branch, absent in the given branch, remove it.<br>
-     * 8. If a file was present at split point and unmodified in the given branch, absent in the current branch, remain it absent.<br>
+     * 5. If a file was not present at split point and present only in current branch,
+     *    remain as they are.<br>
+     * 6. If a file was not present at split point and present only in given branch,
+     *    checkout it and stage.<br>
+     * 7. If a file was present at split point and unmodified in current branch,
+     *    absent in given branch, remove it.<br>
+     * 8. If a file was present at split point and unmodified in the given branch,
+     *    absent in the current branch, remain it absent.<br>
      * Absent: Not tracked nor staged.
      * @param branchName the name of the branch to merge.
      */
@@ -780,12 +793,14 @@ public class Repository {
         for (String file : Objects.requireNonNull(plainFilenamesIn(CWD))) {
             if (!curCommit.getTrack().containsKey(file)) { // untracked
                 if (!stage.getAddStage().containsKey(file)) { // unstaged to add
-                    message("There is an untracked file in the way; delete it, or add and commit it first");
+                    message("There is an untracked file in the way;" +
+                            " delete it, or add and commit it first");
                     System.exit(0);
                 }
             }
             if (stage.getRemoveStage().contains(file)) { // will be deleted
-                message("There is an untracked file in the way; delete it, or add and commit it first");
+                message("There is an untracked file in the way;" +
+                        " delete it, or add and commit it first");
                 System.exit(0);
             }
         }
@@ -809,8 +824,9 @@ public class Repository {
         splitFiles.addAll(curTrack.keySet());
 
         for (String file : splitFiles) {
-            if (!Objects.equals(dstTrack.get(file), curTrack.get(file))) { // different in two branches
-                if (Objects.equals(splitPointTrack.get(file), curTrack.get(file))) { // cur unchanged
+            if (!Objects.equals(dstTrack.get(file), curTrack.get(file))) { // different two branches
+                if (Objects.equals(splitPointTrack.get(file), curTrack.get(file))) {
+                    // cur unchanged
                     if (Objects.isNull(dstTrack.get(file))) { // deleted in dst branch (case 7)
                         restrictedDelete(join(CWD, file)); // remove after merge
                         stage.getRemoveStage().add(file);
@@ -819,28 +835,33 @@ public class Repository {
                         stage.getAddStage().put(file, dstTrack.get(file));
                     }
                 } else { // cur differs from split point
-                    if (!Objects.equals(splitPointTrack.get(file), dstTrack.get(file))) { // dst also differs from split point (case 4)
+                    if (!Objects.equals(splitPointTrack.get(file), dstTrack.get(file))) {
+                        // dst also differs from split point (case 4)
                         message("Encountered a merge conflict.");
-                        byte[] curContent = "".getBytes(StandardCharsets.UTF_8); // notice the coding
+                        byte[] curContent = "".getBytes(StandardCharsets.UTF_8); // notice coding
                         byte[] dstContent = "".getBytes(StandardCharsets.UTF_8);
                         if (Objects.nonNull(curTrack.get(file))) {
-                            curContent = readObject(join(BLOBS_DIR, curTrack.get(file)), Blob.class).getContent();
+                            curContent = readObject(join(BLOBS_DIR, curTrack.get(file)),
+                                    Blob.class).getContent();
                         }
                         if (Objects.nonNull(dstTrack.get(file))) {
-                            dstContent = readObject(join(BLOBS_DIR, dstTrack.get(file)), Blob.class).getContent();
+                            dstContent = readObject(join(BLOBS_DIR, dstTrack.get(file)),
+                                    Blob.class).getContent();
                         }
 
                         File newVersion = join(CWD, file);
                         try {
                             newVersion.createNewFile();
-                            writeContents(newVersion, "<<<<<<< HEAD\n", curContent, "=======\n", dstContent, ">>>>>>>\n");
+                            writeContents(newVersion, "<<<<<<< HEAD\n",
+                                    curContent, "=======\n", dstContent, ">>>>>>>\n");
                             Blob newBlob = new Blob(newVersion);
                             newBlob.save();
                             stage.getAddStage().put(newVersion.getName(), newBlob.getID());
                         } catch (IOException e) {
                             throw error("Unexpected error in merge: " + e.getMessage());
                         }
-                    } else if (Objects.isNull(curTrack.get(file))) { // dst unchanged, removed in cur branch (case 8)
+                    } else if (Objects.isNull(curTrack.get(file))) {
+                        // dst unchanged, removed in cur branch (case 8)
                         restrictedDelete(join(CWD, file));
                         stage.getRemoveStage().add(file);
                     } else { // dst unchanged, cur changed but still tracking (case 2, 5)
@@ -860,7 +881,9 @@ public class Repository {
             dstCommit.setBranchSplit(true);
             writeObject(join(COMMITS_DIR, dstCommit.getID()), dstCommit);
 
-            Commit newCommit = new Commit("Merged " + branchName + " into " + getCurrentBranchName() + ".", new Date(), parents, new HashMap<>());
+            Commit newCommit = new Commit("Merged " + branchName +
+                    " into " + getCurrentBranchName() + ".",
+                    new Date(), parents, new HashMap<>());
             modifyTrack(newCommit, readObject(STAGE_AREA, StageArea.class));
             newCommit.recomputeID();
             newCommit.save();

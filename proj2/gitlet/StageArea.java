@@ -18,12 +18,13 @@ public class StageArea implements Serializable {
      * And the file record removed by rm operation.
      */
 
-    /** The addition stage area, choose Map for better search time. Key: file name, Value: SHA-1 ID */
+    /**
+     * The addition stage area, choose Map for better search time.
+     * Key: file name, Value: SHA-1 ID
+     */
     private final Map<String, String> addStage = new HashMap<>();
     /** The removal stage area, Set is OK. Element: file name */
     private final Set<String> removeStage = new HashSet<>();
-    /** The file index in .gitlet directory. */
-    private static final File stage = STAGE_AREA;
 
     public Map<String, String> getAddStage() {
         return this.addStage;
@@ -37,17 +38,19 @@ public class StageArea implements Serializable {
      * Add a file from add operation to StageArea.
      * If the added file is identical to the one in the last commit tracked.
      * Compare if the SHA-1 ID is the same.
-     * If the added file is not tracked in the cur commit, include it in addStage and save the new blob.
-     * If the file is tracked, but the SHA-1 ID is different, overwrite it in addStage and save the latest version blob.
+     * If the added file is not tracked in the cur commit,
+     * include it in addStage and save the new blob.
+     * If the file is tracked, but the SHA-1 ID is different,
+     * overwrite it in addStage and save the latest version blob.
      * If the file is in the removeStage, remove it from removeStage.
      * After all, write the modified stage into the STAGE_AREA.
      *
      * @param srcFile the source file from working directory.
      */
     public static void addFile(File srcFile) {
-        if (!stage.exists()) {
+        if (!STAGE_AREA.exists()) {
             try {
-                stage.createNewFile();
+                STAGE_AREA.createNewFile();
                 writeObject(STAGE_AREA, new StageArea());
             } catch (IOException e) {
                 throw error("Cannot create stage area file.");

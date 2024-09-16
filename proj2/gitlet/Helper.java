@@ -3,8 +3,6 @@ package gitlet;
 import java.io.File;
 import java.io.Serializable;
 import java.text.DateFormat;
-import java.text.FieldPosition;
-import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;

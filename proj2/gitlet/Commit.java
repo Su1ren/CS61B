@@ -1,14 +1,11 @@
 package gitlet;
 
-// TODO: any imports you need here
 
 import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
 
 import static gitlet.Helper.*;
-import static gitlet.Utils.readContents;
 import static gitlet.Utils.sha1;
 
 /** Represents a gitlet commit object.
@@ -40,7 +37,10 @@ public class Commit implements Serializable {
     private Date date;
     /** Parents are at most 2. */
     private List<String> parents;
-    /** Pointers to the blobs of this Commit, unbounded. Use hashmap to scale down search time. Key: file path, Value: SHA-1 */
+    /**
+     * Pointers to the blobs of this Commit. Use hashmap to scale down search time.
+     * Key: file path, Value: SHA-1
+     */
     private Map<String, String> blobIDs;
     /** The ID of this Commit. */
     private String ID;
@@ -99,7 +99,8 @@ public class Commit implements Serializable {
     }
 
     private String generateID() {
-        return sha1(this.message, timeConvert(this.date), this.parents.toString(), this.blobIDs.toString());
+        return sha1(this.message, timeConvert(this.date),
+                this.parents.toString(), this.blobIDs.toString());
     }
 
     public void recomputeID() {
