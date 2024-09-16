@@ -78,4 +78,12 @@ public class StageArea implements Serializable {
         addStage.clear();
         removeStage.clear();
     }
+
+    public boolean isClear() {
+        return addStage.isEmpty() && removeStage.isEmpty();
+    }
+
+    public static StageArea getStageArea() {
+        return readObject(STAGE_AREA, StageArea.class);
+    }
 }

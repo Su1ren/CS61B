@@ -2,9 +2,11 @@ package gitlet;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static gitlet.Helper.*;
+import static gitlet.StageArea.getStageArea;
 import static gitlet.Utils.*;
 
 /** Represents a gitlet repository.
@@ -128,6 +130,25 @@ public class Repository {
     }
 
     /**
+     * Retrieve the head commit ID from the branch head files in refs/heads/xxx
+     * @param branchName the target branch name
+     * @return the commit ID of the head commit on that branch
+     */
+    private static String getBranchHeadCommitID(String branchName) {
+        return readContentsAsString(join(Repository.BRANCH_HEADS_DIR, branchName));
+    }
+
+    /**
+     * Retrieve the head commit node from the branch name.
+     * @param branchName the target branch name
+     * @return the commit node of the head commit on that branch
+     */
+    public static Commit getBranchHeadCommit(String branchName) {
+        String commitID = getBranchHeadCommitID(branchName);
+        return getCommitFromID(commitID);
+    }
+
+    /**
      * Write the commit ID into the branch head file in heads directory.
      * @param file branch head file should be written.
      * @param id the ID of the current commit, also the written content.
@@ -166,7 +187,7 @@ public class Repository {
      * @param message the message of the new commit
      */
     public static void commit(String message) {
-        StageArea stage = readObject(STAGE_AREA, StageArea.class);
+        StageArea stage = getStageArea();
 
         if (message.isEmpty()) {
             throw new GitletException("Please enter a commit message.");
@@ -246,8 +267,31 @@ public class Repository {
      * @return the commit node
      */
     private static Commit getCommitFromID(String id) {
+        if (id.length() < UID_LENGTH) {
+            return getCommitFromAbbrID(id);
+        }
         File dst = getObjectCommitFile(id);
         return readObject(dst, Commit.class);
+    }
+
+    /**
+     * Retrieve the commit node File from the abbreviated ID in Objects/commits directory.
+     * @param shortID the abbreviated ID of the commit node
+     * @return the commit node.
+     */
+    public static Commit getCommitFromAbbrID(String shortID) {
+        List<String> commits = plainFilenamesIn(Repository.COMMITS_DIR);
+        for (String id : commits) {
+            if (id.startsWith(shortID)) {
+                File dstFile = getObjectCommitFile(id);
+                if (!dstFile.exists()) {
+                    return null;
+                } else {
+                    return readObject(dstFile, Commit.class);
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -260,7 +304,7 @@ public class Repository {
      * @param fileName the name of the file.
      */
     public static void rm(String fileName) {
-        StageArea stage = readObject(STAGE_AREA, StageArea.class);
+        StageArea stage = getStageArea();
 
         if (stage == null) {
             throw new GitletException("No .gitlet directory here.");
@@ -437,7 +481,7 @@ public class Repository {
      * Print all files that have been staged for addition or removal.
      */
     private static void displayStage() {
-        StageArea stage = readObject(STAGE_AREA, StageArea.class);
+        StageArea stage = getStageArea();
 
         System.out.println("=== Staged Files ===");
         for (String file : stage.getAddStage().keySet()) {
@@ -464,7 +508,7 @@ public class Repository {
         List<String> files = plainFilenamesIn(Repository.CWD);
         System.out.println("=== Modifications Not Staged For Commit ===");
         Map<String, String> tracking = getCurrentCommit().getTrack();
-        StageArea stage = readObject(STAGE_AREA, StageArea.class);
+        StageArea stage = getStageArea();
         PriorityQueue<String> q = new PriorityQueue<>();
 
         for (String path : files) {
@@ -506,7 +550,7 @@ public class Repository {
     private static void displayUntracked() {
         List<String> files = plainFilenamesIn(Repository.CWD);
         Map<String, String> tracking = getCurrentCommit().getTrack();
-        StageArea stage = readObject(STAGE_AREA, StageArea.class);
+        StageArea stage = getStageArea();
 
         System.out.println("=== Untracked Files ===");
         for (String file : files) {
@@ -538,6 +582,7 @@ public class Repository {
         try {
             newBranch.createNewFile();
             writeContents(newBranch, getCurrentCommit().getID());
+            getCurrentCommit().setBranchSplit(true);
         } catch (IOException e) {
             throw error("Cannot create branch.");
         }
@@ -598,7 +643,7 @@ public class Repository {
      * Take charge of the files adding, overwriting and removal.
      */
     private static void checkoutHelper(Commit curCommit, Commit checkoutCommit) {
-        StageArea stage = readObject(STAGE_AREA, StageArea.class);
+        StageArea stage = getStageArea();
         if (!curCommit.getID().equals(checkoutCommit.getID())) {
             for (String file : checkoutCommit.getTrack().keySet()) {
                 String blobHash = curCommit.getTrack().get(file);
@@ -654,15 +699,15 @@ public class Repository {
      * If no commit with that ID exists, print error message.
      * If the file doesn't exist in the given commit, print error message.
      */
-    public static void checkoutFileFromCommit(String commitID, String path) {
-        if (!plainFilenamesIn(COMMITS_DIR).contains(commitID)) {
+    public static void checkoutFileFromCommit(String commitID, String file) {
+        if (getCommitFromID(commitID) == null) {
             throw new GitletException("No commit with that id exists");
         }
         Commit dstCommit = getCommitFromID(commitID);
-        if (!dstCommit.getTrack().containsKey(path)) {
+        if (!dstCommit.getTrack().containsKey(file)) {
             throw new GitletException("File does not exist in that commit.");
         }
-        overwriteFile(path, dstCommit.getTrack().get(path));
+        overwriteFile(file, dstCommit.getTrack().get(file));
     }
 
     /**
@@ -692,5 +737,178 @@ public class Repository {
         }
         checkoutHelper(curCommit, dstCommit);
         setBranchHeadCommit(getCurrentBranchName(), commitID);
+    }
+
+    /**
+     * Merge files from the given branch into the current branch.
+     * If the split point is the same commit as the given branch, do nothing.
+     * If the split point is the current branch, then checkout to the given branch.
+     * Otherwise, do the merge as below:<br>
+     * 1. If a file is modified in the given branch but not in the current branch, checkout to the given branch.<br>
+     * 2. If a file has been modified in the current branch but not in the given branch, remain in the current branch.<br>
+     * 3. If a file has been modified since split point in the same way (deleted or the same content) in both branches, leave them unchanged.<br>
+     * 4. If a file has been modified differently in the given branch and the current branch (one changed, another deleted),
+     *    replace the contents of the conflicted file with:<br>
+     *    <<<<<<< HEAD<br>
+     *    contents of file in current branch<br>
+     *    =======<br>
+     *    contents of file in given branch<br>
+     *    >>>>>>><br>
+     * 5. If a file was not present at the split point and present only in the current branch, remain as they are.<br>
+     * 6. If a file was not present at the split point and present only in the given branch, checkout it and stage.<br>
+     * 7. If a file was present at split point and unmodified in the current branch, absent in the given branch, remove it.<br>
+     * 8. If a file was present at split point and unmodified in the given branch, absent in the current branch, remain it absent.<br>
+     * Absent: Not tracked nor staged.
+     * @param branchName the name of the branch to merge.
+     */
+    public static void merge(String branchName) {
+        String curBranch = getCurrentBranchName();
+        if (branchName.equals(curBranch)) {
+            throw error("Cannot merge a branch with itself.");
+        }
+        if (!plainFilenamesIn(BRANCH_HEADS_DIR).contains(branchName)) {
+            throw error("A branch with that name does not exist.");
+        }
+        StageArea stage = getStageArea();
+        if (!stage.isClear()) {
+            throw error("Cannot merge: You have uncommitted changes.");
+        }
+
+        Commit curCommit = getCurrentCommit();
+        Commit dstCommit = getBranchHeadCommit(branchName);
+
+        for (String file : Objects.requireNonNull(plainFilenamesIn(CWD))) {
+            if (!curCommit.getTrack().containsKey(file)) { // untracked
+                if (!stage.getAddStage().containsKey(file)) { // unstaged to add
+                    message("There is an untracked file in the way; delete it, or add and commit it first");
+                    System.exit(0);
+                }
+            }
+            if (stage.getRemoveStage().contains(file)) { // will be deleted
+                message("There is an untracked file in the way; delete it, or add and commit it first");
+                System.exit(0);
+            }
+        }
+
+        Commit splitPoint = getLCACommit(curCommit, dstCommit);
+
+        if (splitPoint.getID().equals(dstCommit.getID())) {
+            throw error("Given branch is an ancestor of the current branch.");
+        }
+        if (splitPoint.getID().equals(curCommit.getID())) {
+            checkoutBranch(branchName);
+            message("Current branch fast-forwarded.");
+            System.exit(0);
+        }
+
+        Map<String, String> splitPointTrack = splitPoint.getTrack();
+        Map<String, String> curTrack = curCommit.getTrack();
+        Map<String, String> dstTrack = dstCommit.getTrack();
+        Set<String> splitFiles = new HashSet<>(splitPointTrack.keySet());
+        splitFiles.addAll(dstTrack.keySet());
+        splitFiles.addAll(curTrack.keySet());
+
+        for (String file : splitFiles) {
+            if (!Objects.equals(dstTrack.get(file), curTrack.get(file))) { // different in two branches
+                if (Objects.equals(splitPointTrack.get(file), curTrack.get(file))) { // cur unchanged
+                    if (Objects.isNull(dstTrack.get(file))) { // deleted in dst branch (case 7)
+                        restrictedDelete(join(CWD, file)); // remove after merge
+                        stage.getRemoveStage().add(file);
+                    } else { // cur unchanged, still tracked in dst branch (case 1, 6)
+                        overwriteFile(file, dstTrack.get(file)); // checkout to dst branch
+                        stage.getAddStage().put(file, dstTrack.get(file));
+                    }
+                } else { // cur differs from split point
+                    if (!Objects.equals(splitPointTrack.get(file), dstTrack.get(file))) { // dst also differs from split point (case 4)
+                        message("Encountered a merge conflict.");
+                        byte[] curContent = "".getBytes(StandardCharsets.UTF_8); // notice the coding
+                        byte[] dstContent = "".getBytes(StandardCharsets.UTF_8);
+                        if (Objects.nonNull(curTrack.get(file))) {
+                            curContent = readObject(join(BLOBS_DIR, curTrack.get(file)), Blob.class).getContent();
+                        }
+                        if (Objects.nonNull(dstTrack.get(file))) {
+                            dstContent = readObject(join(BLOBS_DIR, dstTrack.get(file)), Blob.class).getContent();
+                        }
+
+                        File newVersion = join(CWD, file);
+                        try {
+                            newVersion.createNewFile();
+                            writeContents(newVersion, "<<<<<<< HEAD\n", curContent, "=======\n", dstContent, ">>>>>>>\n");
+                            Blob newBlob = new Blob(newVersion);
+                            newBlob.save();
+                            stage.getAddStage().put(newVersion.getName(), newBlob.getID());
+                        } catch (IOException e) {
+                            throw error("Unexpected error in merge: " + e.getMessage());
+                        }
+                    } else if (Objects.isNull(curTrack.get(file))) { // dst unchanged, removed in cur branch (case 8)
+                        restrictedDelete(join(CWD, file));
+                        stage.getRemoveStage().add(file);
+                    } else { // dst unchanged, cur changed but still tracking (case 2, 5)
+                        overwriteFile(file, curTrack.get(file)); // overwrite as in cur branch
+                        stage.getAddStage().put(file, curTrack.get(file));
+                    }
+                }
+            } else { // same in the two branches (case 3)
+                stage.getAddStage().put(file, curTrack.get(file));
+            } // cases end, waiting for new commit
+
+            writeObject(STAGE_AREA, stage);
+            List<String> parents = new ArrayList<>();
+            parents.add(curCommit.getID());
+            parents.add(dstCommit.getID());
+            setCurrentBranch(getCurrentBranchName());
+            dstCommit.setBranchSplit(true);
+            writeObject(join(COMMITS_DIR, dstCommit.getID()), dstCommit);
+
+            Commit newCommit = new Commit("Merged " + branchName + " into " + getCurrentBranchName() + ".", new Date(), parents, new HashMap<>());
+            modifyTrack(newCommit, readObject(STAGE_AREA, StageArea.class));
+            newCommit.recomputeID();
+            newCommit.save();
+
+            stage.clearStage();
+            writeObject(STAGE_AREA, stage);
+            setBranchHeadCommit(getCurrentBranchName(), newCommit.getID());
+        }
+    }
+
+    /**
+     * Find the latest common ancestor between two commits.
+     * @param curCommit the current commit.
+     * @param dstCommit the destination commit.
+     * @return the commit node of the latest common ancestor.
+     */
+    public static Commit getLCACommit(Commit curCommit, Commit dstCommit) {
+        Commit splitPoint = null;
+        Commit curSplit = getCommitFromID(curCommit.getID());
+        Commit dstSplit = getCommitFromID(dstCommit.getID());
+        Queue<String> fromCur = new ArrayDeque<>();
+        Queue<String> fromDst = new ArrayDeque<>();
+        Set<String> splits = new HashSet<>();
+        while (Objects.nonNull(dstSplit.getParents())) {
+            fromDst.add(dstSplit.getParents().getFirst());
+            if (dstSplit.hasSecondParent()) { // second parent
+                fromDst.add(dstSplit.getParents().getLast());
+            }
+            if (dstSplit.hasBranchSplit()) { // new split point
+                splits.add(dstSplit.getID());
+            }
+            dstSplit = getCommitFromID(fromDst.remove());
+        }
+
+        while (Objects.nonNull(curSplit.getParents())) {
+            fromCur.add(curSplit.getParents().getFirst());
+            if (curSplit.hasSecondParent()) {
+                fromCur.add(curSplit.getParents().getLast());
+            }
+            if (curSplit.hasBranchSplit() && splits.contains(curSplit.getID())) {
+                splitPoint = curSplit;
+                break;
+            }
+            curSplit = getCommitFromID(fromCur.remove());
+        }
+        if (splitPoint == null) {
+            splitPoint = curSplit;
+        }
+        return splitPoint;
     }
 }

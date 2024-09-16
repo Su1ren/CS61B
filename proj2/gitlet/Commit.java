@@ -102,6 +102,14 @@ public class Commit implements Serializable {
         return sha1(this.message, timeConvert(this.date), this.parents.toString(), this.blobIDs.toString());
     }
 
+    public void recomputeID() {
+        this.ID = generateID();
+    }
+
+    public boolean hasSecondParent() {
+        return this.parents.size() > 1;
+    }
+
     /**
      * Save the commit node as a file in Objects/commits directory
      * Chain the commit node to its parents

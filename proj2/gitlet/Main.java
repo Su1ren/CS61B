@@ -78,6 +78,8 @@ public class Main {
                 Repository.reset(args[1]);
                 break;
             case "merge":
+                validateArgs(args, 2);
+                Repository.merge(args[1]);
                 break;
             default:
                 throw new GitletException("No command with that name exists.");
