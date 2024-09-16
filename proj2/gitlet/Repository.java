@@ -727,7 +727,7 @@ public class Repository {
      * If the file doesn't exist in the given commit, print error message.
      */
     public static void checkoutFileFromCommit(String commitID, String file) {
-        if (!plainFilenamesIn(COMMITS_DIR).contains(commitID)) {
+        if (Objects.isNull(getCommitFromID(commitID))) {
             message("No commit with that id exists");
             System.exit(0);
         }
