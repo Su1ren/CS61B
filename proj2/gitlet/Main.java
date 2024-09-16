@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static gitlet.Utils.message;
+
 /** Driver class for Gitlet, a subset of the Git version-control system.
  *  @author Suiren
  */
@@ -17,7 +19,8 @@ public class Main {
     public static void main(String[] args) {
 
         if (args.length == 0) {
-            throw new GitletException("Please enter a command.");
+            message("Please enter a command.");
+            System.exit(0);
         }
 
         String firstArg = args[0];
@@ -82,7 +85,8 @@ public class Main {
                 Repository.merge(args[1]);
                 break;
             default:
-                throw new GitletException("No command with that name exists.");
+                message("No command with that name exists.");
+                break;
         }
     }
 
