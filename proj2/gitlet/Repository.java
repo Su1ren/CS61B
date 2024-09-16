@@ -635,9 +635,10 @@ public class Repository {
         Commit checkoutCommit = getCurrentCommit();
 
         for (String file : files) {
-            if (!curCommit.getTrack().containsKey(file) && checkoutCommit.getTrack().containsKey(file)) {
-                throw error("There is an untracked file in the way;" +
-                        " delete it, or add and commit it first.");
+            if (!curCommit.getTrack().containsKey(file)
+                    && checkoutCommit.getTrack().containsKey(file)) {
+                throw error("There is an untracked file in the way;"
+                        + " delete it, or add and commit it first.");
             }
         }
         checkoutHelper(curCommit, checkoutCommit);
@@ -733,8 +734,8 @@ public class Repository {
         for (String file : Objects.requireNonNull(plainFilenamesIn(CWD))) {
             if (!curCommit.getTrack().containsKey(file)) {
                 if (dstCommit.getTrack().containsKey(file)) {
-                    throw error("There is an untracked file in the way;" +
-                            " delete it, or add and commit it first");
+                    throw error("There is an untracked file in the way;"
+                            + " delete it, or add and commit it first");
                 } else {
                     rm(file);
                 }
@@ -775,36 +776,11 @@ public class Repository {
      * @param branchName the name of the branch to merge.
      */
     public static void merge(String branchName) {
-        String curBranch = getCurrentBranchName();
-        if (branchName.equals(curBranch)) {
-            throw error("Cannot merge a branch with itself.");
-        }
-        if (!plainFilenamesIn(BRANCH_HEADS_DIR).contains(branchName)) {
-            throw error("A branch with that name does not exist.");
-        }
-        StageArea stage = getStageArea();
-        if (!stage.isClear()) {
-            throw error("Cannot merge: You have uncommitted changes.");
-        }
 
+        preMergeCheck(branchName);
+        StageArea stage = getStageArea();
         Commit curCommit = getCurrentCommit();
         Commit dstCommit = getBranchHeadCommit(branchName);
-
-        for (String file : Objects.requireNonNull(plainFilenamesIn(CWD))) {
-            if (!curCommit.getTrack().containsKey(file)) { // untracked
-                if (!stage.getAddStage().containsKey(file)) { // unstaged to add
-                    message("There is an untracked file in the way;" +
-                            " delete it, or add and commit it first");
-                    System.exit(0);
-                }
-            }
-            if (stage.getRemoveStage().contains(file)) { // will be deleted
-                message("There is an untracked file in the way;" +
-                        " delete it, or add and commit it first");
-                System.exit(0);
-            }
-        }
-
         Commit splitPoint = getLCACommit(curCommit, dstCommit);
 
         if (splitPoint.getID().equals(dstCommit.getID())) {
@@ -873,24 +849,7 @@ public class Repository {
                 stage.getAddStage().put(file, curTrack.get(file));
             } // cases end, waiting for new commit
 
-            writeObject(STAGE_AREA, stage);
-            List<String> parents = new ArrayList<>();
-            parents.add(curCommit.getID());
-            parents.add(dstCommit.getID());
-            setCurrentBranch(getCurrentBranchName());
-            dstCommit.setBranchSplit(true);
-            writeObject(join(COMMITS_DIR, dstCommit.getID()), dstCommit);
-
-            Commit newCommit = new Commit("Merged " + branchName +
-                    " into " + getCurrentBranchName() + ".",
-                    new Date(), parents, new HashMap<>());
-            modifyTrack(newCommit, readObject(STAGE_AREA, StageArea.class));
-            newCommit.recomputeID();
-            newCommit.save();
-
-            stage.clearStage();
-            writeObject(STAGE_AREA, stage);
-            setBranchHeadCommit(getCurrentBranchName(), newCommit.getID());
+            mergeCommit(curCommit, dstCommit, branchName);
         }
     }
 
@@ -933,5 +892,68 @@ public class Repository {
             splitPoint = curSplit;
         }
         return splitPoint;
+    }
+
+    /**
+     *
+     */
+    private static void preMergeCheck(String branchName) {
+        String curBranch = getCurrentBranchName();
+        if (branchName.equals(curBranch)) {
+            throw error("Cannot merge a branch with itself.");
+        }
+        if (!plainFilenamesIn(BRANCH_HEADS_DIR).contains(branchName)) {
+            throw error("A branch with that name does not exist.");
+        }
+        StageArea stage = getStageArea();
+        if (!stage.isClear()) {
+            throw error("Cannot merge: You have uncommitted changes.");
+        }
+
+        Commit curCommit = getCurrentCommit();
+        Commit dstCommit = getBranchHeadCommit(branchName);
+
+        for (String file : Objects.requireNonNull(plainFilenamesIn(CWD))) {
+            if (!curCommit.getTrack().containsKey(file)) { // untracked
+                if (!stage.getAddStage().containsKey(file)) { // unstaged to add
+                    message("There is an untracked file in the way;"
+                            + " delete it, or add and commit it first");
+                    System.exit(0);
+                }
+            }
+            if (stage.getRemoveStage().contains(file)) { // will be deleted
+                message("There is an untracked file in the way;"
+                        + " delete it, or add and commit it first");
+                System.exit(0);
+            }
+        }
+    }
+
+    /**
+     * Merge the two commit nodes, update branch head and stage area.
+     * @param curCommit the current commit
+     * @param dstCommit the destination commit
+     * @param branchName the merged branch name
+     */
+    private static void mergeCommit(Commit curCommit, Commit dstCommit, String branchName) {
+        StageArea stage = getStageArea();
+        writeObject(STAGE_AREA, stage);
+        List<String> parents = new ArrayList<>();
+        parents.add(curCommit.getID());
+        parents.add(dstCommit.getID());
+        setCurrentBranch(getCurrentBranchName());
+        dstCommit.setBranchSplit(true);
+        writeObject(join(COMMITS_DIR, dstCommit.getID()), dstCommit);
+
+        Commit newCommit = new Commit("Merged " + branchName
+                + " into " + getCurrentBranchName() + ".",
+                new Date(), parents, new HashMap<>());
+        modifyTrack(newCommit, getStageArea());
+        newCommit.recomputeID();
+        newCommit.save();
+
+        stage.clearStage();
+        writeObject(STAGE_AREA, stage);
+        setBranchHeadCommit(getCurrentBranchName(), newCommit.getID());
     }
 }
