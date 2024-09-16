@@ -281,6 +281,9 @@ public class Repository {
             return getCommitFromAbbrID(id);
         }
         File dst = getObjectCommitFile(id);
+        if (!dst.exists()) {
+            return null;
+        }
         return readObject(dst, Commit.class);
     }
 
@@ -455,6 +458,10 @@ public class Repository {
      * Feel free to leave them blank.
      */
     public static void status() {
+        if (!(GITLET_DIR.exists() && GITLET_DIR.isDirectory())) {
+            message("Not in an initialized Gitlet directory.");
+            System.exit(0);
+        }
         displayBranches();
         displayStage();
         displayModificationNotStaged();
