@@ -316,7 +316,7 @@ public class Repository {
     public static void rm(String fileName) {
         StageArea stage = getStageArea();
 
-        if (stage == null) {
+        if (Objects.isNull(stage)) {
             message("No .gitlet directory here.");
             System.exit(0);
         }
@@ -469,7 +469,7 @@ public class Repository {
         System.out.println("=== Branches ===");
         // System.out.println("*" + getCurrentBranchName());
         List<String> heads = plainFilenamesIn(BRANCH_HEADS_DIR);
-        if (heads.isEmpty()) {
+        if (Objects.isNull(heads)) {
             message("Not in an initialized Gitlet directory.");
         }
         for (String branch : heads) {
@@ -622,7 +622,8 @@ public class Repository {
         }
 
         File dstBranch = join(Repository.BRANCH_HEADS_DIR, name);
-        restrictedDelete(dstBranch);
+        // restrictedDelete(dstBranch);
+        dstBranch.delete();
     }
 
     /**
@@ -705,15 +706,15 @@ public class Repository {
      * The new version is not staged.
      * If the file doesn't exist in the previous commit, print error message.
      */
-    public static void checkoutFile(String path) {
+    public static void checkoutFile(String file) {
         Commit curCommit = getCurrentCommit();
 
-        if (!curCommit.getTrack().containsKey(path)) {
+        if (!curCommit.getTrack().containsKey(file)) {
             message("File does not exist in that commit.");
             System.exit(0);
         } else {
-            String blobHash = curCommit.getTrack().get(path);
-            overwriteFile(path, blobHash);
+            String blobHash = curCommit.getTrack().get(file);
+            overwriteFile(file, blobHash);
         }
     }
 
@@ -726,7 +727,7 @@ public class Repository {
      * If the file doesn't exist in the given commit, print error message.
      */
     public static void checkoutFileFromCommit(String commitID, String file) {
-        if (getCommitFromID(commitID) == null) {
+        if (!plainFilenamesIn(COMMITS_DIR).contains(commitID)) {
             message("No commit with that id exists");
             System.exit(0);
         }
@@ -762,12 +763,15 @@ public class Repository {
                             + " delete it, or add and commit it first");
                     System.exit(0);
                 } else {
-                    rm(file);
+                    restrictedDelete(file);
                 }
             }
         }
         checkoutHelper(curCommit, dstCommit);
         setBranchHeadCommit(getCurrentBranchName(), commitID);
+        StageArea stage = getStageArea();
+        stage.clearStage();
+        writeObject(STAGE_AREA, stage);
     }
 
     /**
