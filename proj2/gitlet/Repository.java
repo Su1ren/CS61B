@@ -867,9 +867,9 @@ public class Repository {
         Queue<String> fromDst = new ArrayDeque<>();
         Set<String> splits = new HashSet<>();
         while (Objects.nonNull(dstSplit.getParents())) {
-            fromDst.add(dstSplit.getParents().getFirst());
+            fromDst.add(dstSplit.getParents().get(0));
             if (dstSplit.hasSecondParent()) { // second parent
-                fromDst.add(dstSplit.getParents().getLast());
+                fromDst.add(dstSplit.getParents().get(1));
             }
             if (dstSplit.hasBranchSplit()) { // new split point
                 splits.add(dstSplit.getID());
@@ -878,9 +878,9 @@ public class Repository {
         }
 
         while (Objects.nonNull(curSplit.getParents())) {
-            fromCur.add(curSplit.getParents().getFirst());
+            fromCur.add(curSplit.getParents().get(0));
             if (curSplit.hasSecondParent()) {
-                fromCur.add(curSplit.getParents().getLast());
+                fromCur.add(curSplit.getParents().get(1));
             }
             if (curSplit.hasBranchSplit() && splits.contains(curSplit.getID())) {
                 splitPoint = curSplit;
