@@ -671,7 +671,7 @@ public class Repository {
         StageArea stage = getStageArea();
         if (!curCommit.getID().equals(checkoutCommit.getID())) {
             for (String file : checkoutCommit.getTrack().keySet()) {
-                String blobHash = curCommit.getTrack().get(file);
+                String blobHash = checkoutCommit.getTrack().get(file);
                 overwriteFile(file, blobHash);
             }
             for (String file : curCommit.getTrack().keySet()) {
@@ -931,8 +931,8 @@ public class Repository {
             System.exit(0);
         }
         if (!plainFilenamesIn(BRANCH_HEADS_DIR).contains(branchName)) {
-           message("A branch with that name does not exist.");
-           System.exit(0);
+            message("A branch with that name does not exist.");
+            System.exit(0);
         }
         StageArea stage = getStageArea();
         if (!stage.isClear()) {
