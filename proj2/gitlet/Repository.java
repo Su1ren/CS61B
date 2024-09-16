@@ -87,7 +87,8 @@ public class Repository {
      */
     public static void init() {
         if (GITLET_DIR.exists()) {
-            throw error("A Gitlet version-control system already exists in the current directory.");
+            message("A Gitlet version-control system already exists in the current directory.");
+            System.exit(0);
         }
 
         GITLET_DIR.mkdir();
@@ -96,6 +97,12 @@ public class Repository {
         BRANCH_HEADS_DIR.mkdir();
         BLOBS_DIR.mkdir();
         COMMITS_DIR.mkdir();
+        try {
+            STAGE_AREA.createNewFile();
+            writeObject(STAGE_AREA, new StageArea());
+        } catch (IOException e) {
+            throw error("Cannot create index.");
+        }
         setCurrentBranch(DEFAULT_BRANCH);
         initCommit();
     }
@@ -170,7 +177,7 @@ public class Repository {
     public static void add(String fileName) {
         File file = join(CWD, fileName);
         if (!file.exists()) {
-            throw new GitletException("File does not exist.");
+            throw error("File does not exist.");
         }
         StageArea.addFile(file);
         // createBlob(file);
@@ -895,7 +902,8 @@ public class Repository {
     }
 
     /**
-     *
+     * Check if merge can proceed correctly.
+     * @param branchName the name of the branch
      */
     private static void preMergeCheck(String branchName) {
         String curBranch = getCurrentBranchName();
