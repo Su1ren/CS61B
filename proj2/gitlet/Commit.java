@@ -35,8 +35,10 @@ public class Commit implements Serializable {
     private String message;
     /** The date of this Commit. */
     private Date date;
-    /** Parents are at most 2. */
-    private List<String> parents;
+    /** First parent. */
+    private String firstParent;
+    /** Second parent. Used in merge. */
+    private String secondParent;
     /**
      * Pointers to the blobs of this Commit. Use hashmap to scale down search time.
      * Key: file path, Value: SHA-1
@@ -49,10 +51,10 @@ public class Commit implements Serializable {
     /** Whether this commit starts a branching. */
     private boolean branchFrom = false;
 
-    public Commit(String message, Date date, List<String> parent, Map<String, String> files) {
+    public Commit(String message, Date date, String firstParent, Map<String, String> files) {
         this.message = message;
         this.date = date;
-        this.parents = parent;
+        this.firstParent = firstParent;
         this.blobIDs = files;
         this.ID = generateID();
         this.file = getObjectCommitFile(this.ID);
@@ -64,7 +66,7 @@ public class Commit implements Serializable {
     public Commit() {
         this.message = "initial commit";
         this.date = new Date(0);
-        this.parents = new ArrayList<>();
+        this.firstParent = "";
         this.blobIDs = new HashMap<>();
         this.ID = generateID();
         this.file = getObjectCommitFile(this.ID);
@@ -78,8 +80,16 @@ public class Commit implements Serializable {
         return this.blobIDs;
     }
 
-    public List<String> getParents() {
-        return this.parents;
+    public String getFirstParent() {
+        return this.firstParent;
+    }
+
+    public String getSecondParent() {
+        return this.secondParent;
+    }
+
+    public void setSecondParent(String ID) {
+        this.secondParent = ID;
     }
 
     public Date getDate() {
@@ -100,7 +110,7 @@ public class Commit implements Serializable {
 
     private String generateID() {
         return sha1(this.message, timeConvert(this.date),
-                this.parents.toString(), this.blobIDs.toString());
+                this.firstParent, this.blobIDs.toString());
     }
 
     public void recomputeID() {
@@ -108,7 +118,7 @@ public class Commit implements Serializable {
     }
 
     public boolean hasSecondParent() {
-        return this.parents.size() > 1;
+        return this.secondParent != null;
     }
 
     /**

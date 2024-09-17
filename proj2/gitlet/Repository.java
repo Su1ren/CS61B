@@ -228,9 +228,7 @@ public class Repository {
      */
     private static Commit chainCommitAfterCurrent(String message) {
         Commit cur = Repository.getCurrentCommit();
-        List<String> parent = new ArrayList<>();
-        parent.add(cur.getID());
-        return new Commit(message, new Date(), parent, cur.getTrack());
+        return new Commit(message, new Date(), cur.getID(), cur.getTrack());
     }
 
     /**
@@ -370,11 +368,15 @@ public class Repository {
      */
     public static void log() {
         Commit cur = getCurrentCommit();
-        while (!cur.getParents().isEmpty()) {
+        while (Objects.nonNull(cur)) {
             displayCommit(cur);
-            cur = getCommitFromID(cur.getParents().get(0)); // getCommit()
+            if (!cur.getFirstParent().isEmpty()) {
+                cur = getCommitFromID(cur.getFirstParent());
+            } else {
+                break;
+            }
         }
-        displayCommit(cur);
+        // displayCommit(cur);
     }
 
     /**
@@ -384,9 +386,9 @@ public class Repository {
     private static void displayCommit(Commit commit) {
         System.out.println("===");
         System.out.println("commit " + commit.getID());
-        if (commit.getParents().size() > 1) {
-            System.out.println("Merge: " + commit.getParents().get(0).substring(0, 7) + " "
-                    + commit.getParents().get(1).substring(0, 7));
+        if (commit.hasSecondParent()) {
+            System.out.println("Merge: " + commit.getFirstParent().substring(0, 7) + " "
+                    + commit.getSecondParent().substring(0, 7));
         }
         System.out.println("Date: " + timeConvert(commit.getDate()));
         System.out.println(commit.getMessage());
@@ -818,6 +820,7 @@ public class Repository {
         Commit curCommit = getCurrentCommit();
         Commit dstCommit = getBranchHeadCommit(branchName);
         Commit splitPoint = getLCACommit(curCommit, dstCommit);
+        displayCommit(splitPoint);
 
         if (splitPoint.getID().equals(dstCommit.getID())) {
             message("Given branch is an ancestor of the current branch.");
@@ -903,11 +906,11 @@ public class Repository {
         Queue<String> fromCur = new ArrayDeque<>();
         Queue<String> fromDst = new ArrayDeque<>();
         Set<String> splits = new HashSet<>();
-        while (Objects.nonNull(dstSplit.getParents())
-                && !dstSplit.getParents().isEmpty()) {
-            fromDst.add(dstSplit.getParents().get(0));
+        while (Objects.nonNull(dstSplit.getFirstParent())
+                && !dstSplit.getFirstParent().isEmpty()) {
+            fromDst.add(dstSplit.getFirstParent());
             if (dstSplit.hasSecondParent()) { // second parent
-                fromDst.add(dstSplit.getParents().get(1));
+                fromDst.add(dstSplit.getSecondParent());
             }
             if (dstSplit.hasBranchSplit()) { // new split point
                 splits.add(dstSplit.getID());
@@ -915,11 +918,11 @@ public class Repository {
             dstSplit = getCommitFromID(fromDst.remove());
         }
 
-        while (Objects.nonNull(curSplit.getParents())
-                && !curSplit.getParents().isEmpty()) {
-            fromCur.add(curSplit.getParents().get(0));
+        while (Objects.nonNull(curSplit.getFirstParent())
+                && !curSplit.getFirstParent().isEmpty()) {
+            fromCur.add(curSplit.getFirstParent());
             if (curSplit.hasSecondParent()) {
-                fromCur.add(curSplit.getParents().get(1));
+                fromCur.add(curSplit.getSecondParent());
             }
             if (curSplit.hasBranchSplit() && splits.contains(curSplit.getID())) {
                 splitPoint = curSplit;
@@ -980,16 +983,17 @@ public class Repository {
      */
     private static void mergeCommit(Commit curCommit, Commit dstCommit, String branchName) {
         StageArea stage = getStageArea();
-        List<String> parents = new ArrayList<>();
-        parents.add(curCommit.getID());
-        parents.add(dstCommit.getID());
+//        List<String> parents = new ArrayList<>();
+//        parents.add(curCommit.getID());
+//        parents.add(dstCommit.getID());
         setCurrentBranch(getCurrentBranchName());
         dstCommit.setBranchSplit(true);
         writeObject(join(COMMITS_DIR, dstCommit.getID()), dstCommit);
 
         Commit newCommit = new Commit("Merged " + branchName
                 + " into " + getCurrentBranchName() + ".",
-                new Date(), parents, new HashMap<>());
+                new Date(), curCommit.getID(), new HashMap<>());
+        newCommit.setSecondParent(dstCommit.getID());
         modifyTrack(newCommit, getStageArea());
         newCommit.recomputeID();
         newCommit.save();
