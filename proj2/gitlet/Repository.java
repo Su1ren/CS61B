@@ -128,6 +128,15 @@ public class Repository {
     }
 
     /**
+     * Write the commit ID into the branch head file in heads directory.
+     * @param file branch head file should be written.
+     * @param id the ID of the current commit, also the written content.
+     */
+    private static void setBranchHead(File file, String id) {
+        writeContents(file, id);
+    }
+
+    /**
      * Chain the current commit node into the branch head directory.
      * @param branch the name of the branch
      * @param id the ID of the current commit
@@ -153,15 +162,6 @@ public class Repository {
     public static Commit getBranchHeadCommit(String branchName) {
         String commitID = getBranchHeadCommitID(branchName);
         return getCommitFromID(commitID);
-    }
-
-    /**
-     * Write the commit ID into the branch head file in heads directory.
-     * @param file branch head file should be written.
-     * @param id the ID of the current commit, also the written content.
-     */
-    private static void setBranchHead(File file, String id) {
-        writeContents(file, id);
     }
 
     /**
@@ -201,7 +201,7 @@ public class Repository {
             message("Please enter a commit message.");
             System.exit(0);
         }
-        if (stage.getAddStage().isEmpty() && stage.getRemoveStage().isEmpty()) {
+        if (stage.isClear()) {
             message("No changes added to the commit.");
             System.exit(0);
         }
@@ -240,11 +240,11 @@ public class Repository {
      * @param stage the stage area
      */
     private static void modifyTrack(Commit newCommit, StageArea stage) {
-        for (String path: stage.getAddStage().keySet()) {
-            newCommit.getTrack().put(path, stage.getAddStage().get(path));
+        for (String file: stage.getAddStage().keySet()) {
+            newCommit.getTrack().put(file, stage.getAddStage().get(file));
         }
-        for (String path: stage.getRemoveStage()) {
-            newCommit.getTrack().remove(path);
+        for (String file: stage.getRemoveStage()) {
+            newCommit.getTrack().remove(file);
         }
     }
 
@@ -885,7 +885,7 @@ public class Repository {
             } else { // same in the two branches (case 3)
                 stage.getAddStage().put(file, curTrack.get(file));
             } // cases end, waiting for new commit
-
+            writeObject(STAGE_AREA, stage);
             mergeCommit(curCommit, dstCommit, branchName);
         }
     }
@@ -903,7 +903,8 @@ public class Repository {
         Queue<String> fromCur = new ArrayDeque<>();
         Queue<String> fromDst = new ArrayDeque<>();
         Set<String> splits = new HashSet<>();
-        while (Objects.nonNull(dstSplit.getParents())) {
+        while (Objects.nonNull(dstSplit.getParents()) 
+                && !dstSplit.getParents().isEmpty()) {
             fromDst.add(dstSplit.getParents().get(0));
             if (dstSplit.hasSecondParent()) { // second parent
                 fromDst.add(dstSplit.getParents().get(1));
@@ -978,7 +979,6 @@ public class Repository {
      */
     private static void mergeCommit(Commit curCommit, Commit dstCommit, String branchName) {
         StageArea stage = getStageArea();
-        writeObject(STAGE_AREA, stage);
         List<String> parents = new ArrayList<>();
         parents.add(curCommit.getID());
         parents.add(dstCommit.getID());

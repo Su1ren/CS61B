@@ -44,7 +44,7 @@ public class Commit implements Serializable {
     private Map<String, String> blobIDs;
     /** The ID of this Commit. */
     private String ID;
-    /** The corresponding file record of this Commit. */
+    /** The corresponding file record of this Commit in objects/commits directory. */
     private File file;
     /** Whether this commit starts a branching. */
     private boolean branchFrom = false;

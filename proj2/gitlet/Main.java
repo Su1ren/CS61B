@@ -65,8 +65,7 @@ public class Main {
                 } else if (args.length == 4 && args[2].equals("--")) {
                     Repository.checkoutFileFromCommit(args[1], args[3]);
                 } else {
-                    message("Incorrect operands.");
-		    System.exit(0);
+                    throw new GitletException("Incorrect operands.");
                 }
                 break;
             case "branch":
@@ -99,7 +98,7 @@ public class Main {
     private static void validateArgs(String args[], int argNum) {
         if (args.length != argNum) {
             message("Incorrect operands.");
-	    System.exit(0);
+            System.exit(0);
         }
     }
 }
