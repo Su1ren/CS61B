@@ -820,8 +820,6 @@ public class Repository {
         Commit curCommit = getCurrentCommit();
         Commit dstCommit = getBranchHeadCommit(branchName);
         Commit splitPoint = getLCACommit(curCommit, dstCommit);
-//        displayCommit(splitPoint);
-//        displayCommit(getCurrentCommit());
 
         if (splitPoint.getID().equals(dstCommit.getID())) {
             message("Given branch is an ancestor of the current branch.");
@@ -932,16 +930,16 @@ public class Repository {
 
     /**
      * Take charge of recursively construct distance graph.
-     * @param srcCommitID the source commit node ID.
+     * @param srcID the source commit node ID.
      * @param depth the current depth.
      * @param graph the constructing graph.
      */
-    private static void buildDistGraphHelper(String srcCommitID, int depth, Map<String, Integer> graph) {
-        if (Objects.isNull(srcCommitID) || srcCommitID.isEmpty()) {
-            return ;
+    private static void buildDistGraphHelper(String srcID, int depth, Map<String, Integer> graph) {
+        if (Objects.isNull(srcID) || srcID.isEmpty()) {
+            return;
         }
-        graph.put(srcCommitID, depth);
-        Commit srcCommit = getCommitFromID(srcCommitID);
+        graph.put(srcID, depth);
+        Commit srcCommit = getCommitFromID(srcID);
         buildDistGraphHelper(srcCommit.getFirstParent(), depth + 1, graph);
         buildDistGraphHelper(srcCommit.getSecondParent(), depth + 1, graph);
     }
