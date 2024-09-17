@@ -88,8 +88,8 @@ public class Commit implements Serializable {
         return this.secondParent;
     }
 
-    public void setSecondParent(String ID) {
-        this.secondParent = ID;
+    public void setSecondParent(String id) {
+        this.secondParent = id;
     }
 
     public Date getDate() {

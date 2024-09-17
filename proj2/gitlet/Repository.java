@@ -820,7 +820,8 @@ public class Repository {
         Commit curCommit = getCurrentCommit();
         Commit dstCommit = getBranchHeadCommit(branchName);
         Commit splitPoint = getLCACommit(curCommit, dstCommit);
-        displayCommit(splitPoint);
+//        displayCommit(splitPoint);
+//        displayCommit(getCurrentCommit());
 
         if (splitPoint.getID().equals(dstCommit.getID())) {
             message("Given branch is an ancestor of the current branch.");
@@ -888,9 +889,10 @@ public class Repository {
             } else { // same in the two branches (case 3)
                 stage.getAddStage().put(file, curTrack.get(file));
             } // cases end, waiting for new commit
-            writeObject(STAGE_AREA, stage);
-            mergeCommit(curCommit, dstCommit, branchName);
         }
+        writeObject(STAGE_AREA, stage);
+        //displayCommit(getCurrentCommit());
+        mergeCommit(curCommit, dstCommit, branchName);
     }
 
     /**
@@ -900,41 +902,85 @@ public class Repository {
      * @return the commit node of the latest common ancestor.
      */
     public static Commit getLCACommit(Commit curCommit, Commit dstCommit) {
-        Commit splitPoint = null;
-        Commit curSplit = getCommitFromID(curCommit.getID());
-        Commit dstSplit = getCommitFromID(dstCommit.getID());
-        Queue<String> fromCur = new ArrayDeque<>();
-        Queue<String> fromDst = new ArrayDeque<>();
-        Set<String> splits = new HashSet<>();
-        while (Objects.nonNull(dstSplit.getFirstParent())
-                && !dstSplit.getFirstParent().isEmpty()) {
-            fromDst.add(dstSplit.getFirstParent());
-            if (dstSplit.hasSecondParent()) { // second parent
-                fromDst.add(dstSplit.getSecondParent());
+        String splitCommitID = "";
+        Map<String, Integer> curGraph = buildDistGraph(curCommit);
+        Map<String, Integer> dstGraph = buildDistGraph(dstCommit);
+        int minDepth = Integer.MAX_VALUE;
+        for (String curID : curGraph.keySet()) {
+            int depth = curGraph.get(curID);
+            if (dstGraph.containsKey(curID) && depth < minDepth) {
+                splitCommitID = curID;
+                minDepth = depth;
             }
-            if (dstSplit.hasBranchSplit()) { // new split point
-                splits.add(dstSplit.getID());
-            }
-            dstSplit = getCommitFromID(fromDst.remove());
         }
 
-        while (Objects.nonNull(curSplit.getFirstParent())
-                && !curSplit.getFirstParent().isEmpty()) {
-            fromCur.add(curSplit.getFirstParent());
-            if (curSplit.hasSecondParent()) {
-                fromCur.add(curSplit.getSecondParent());
-            }
-            if (curSplit.hasBranchSplit() && splits.contains(curSplit.getID())) {
-                splitPoint = curSplit;
-                break;
-            }
-            curSplit = getCommitFromID(fromCur.remove());
-        }
-        if (splitPoint == null) {
-            splitPoint = curSplit;
-        }
-        return splitPoint;
+        return getCommitFromID(splitCommitID);
     }
+
+    /**
+     * Build the distance graph from the argument commit node.
+     * The Input node is depth 0, its parents 1 and their parents 2. So forth.
+     * From DS knowledge, we can conclude that this graph is a DAG.
+     * @param srcCommit the source commit node.
+     * @return The <CommitID, Distance> hashmap.
+     */
+    private static Map<String, Integer> buildDistGraph(Commit srcCommit) {
+        Map<String, Integer> re = new HashMap<>();
+        buildDistGraphHelper(srcCommit.getID(), 0, re);
+        return re;
+    }
+
+    /**
+     * Take charge of recursively construct distance graph.
+     * @param srcCommitID the source commit node ID.
+     * @param depth the current depth.
+     * @param graph the constructing graph.
+     */
+    private static void buildDistGraphHelper(String srcCommitID, int depth, Map<String, Integer> graph) {
+        if (Objects.isNull(srcCommitID) || srcCommitID.isEmpty()) {
+            return ;
+        }
+        graph.put(srcCommitID, depth);
+        Commit srcCommit = getCommitFromID(srcCommitID);
+        buildDistGraphHelper(srcCommit.getFirstParent(), depth + 1, graph);
+        buildDistGraphHelper(srcCommit.getSecondParent(), depth + 1, graph);
+    }
+//    public static Commit getLCACommit(Commit curCommit, Commit dstCommit) {
+//        Commit splitPoint = null;
+//        Commit curSplit = getCommitFromID(curCommit.getID());
+//        Commit dstSplit = getCommitFromID(dstCommit.getID());
+//        Queue<String> fromCur = new ArrayDeque<>();
+//        Queue<String> fromDst = new ArrayDeque<>();
+//        Set<String> splits = new HashSet<>();
+//        while (Objects.nonNull(dstSplit.getFirstParent())
+//                && !dstSplit.getFirstParent().isEmpty()) {
+//            fromDst.add(dstSplit.getFirstParent());
+//            if (dstSplit.hasSecondParent()) { // second parent
+//                fromDst.add(dstSplit.getSecondParent());
+//            }
+//            if (dstSplit.hasBranchSplit()) { // new split point
+//                splits.add(dstSplit.getID());
+//            }
+//            dstSplit = getCommitFromID(fromDst.remove());
+//        }
+//
+//        while (Objects.nonNull(curSplit.getFirstParent())
+//                && !curSplit.getFirstParent().isEmpty()) {
+//            fromCur.add(curSplit.getFirstParent());
+//            if (curSplit.hasSecondParent()) {
+//                fromCur.add(curSplit.getSecondParent());
+//            }
+//            if (curSplit.hasBranchSplit() && splits.contains(curSplit.getID())) {
+//                splitPoint = curSplit;
+//                break;
+//            }
+//            curSplit = getCommitFromID(fromCur.remove());
+//        }
+//        if (splitPoint == null) {
+//            splitPoint = curSplit;
+//        }
+//        return splitPoint;
+//    }
 
     /**
      * Check if merge can proceed correctly.
@@ -986,6 +1032,7 @@ public class Repository {
 //        List<String> parents = new ArrayList<>();
 //        parents.add(curCommit.getID());
 //        parents.add(dstCommit.getID());
+        //displayCommit(getCurrentCommit());
         setCurrentBranch(getCurrentBranchName());
         dstCommit.setBranchSplit(true);
         writeObject(join(COMMITS_DIR, dstCommit.getID()), dstCommit);
@@ -994,7 +1041,7 @@ public class Repository {
                 + " into " + getCurrentBranchName() + ".",
                 new Date(), curCommit.getID(), new HashMap<>());
         newCommit.setSecondParent(dstCommit.getID());
-        modifyTrack(newCommit, getStageArea());
+        modifyTrack(newCommit, stage);
         newCommit.recomputeID();
         newCommit.save();
 
