@@ -903,7 +903,7 @@ public class Repository {
         Queue<String> fromCur = new ArrayDeque<>();
         Queue<String> fromDst = new ArrayDeque<>();
         Set<String> splits = new HashSet<>();
-        while (Objects.nonNull(dstSplit.getParents()) 
+        while (Objects.nonNull(dstSplit.getParents())
                 && !dstSplit.getParents().isEmpty()) {
             fromDst.add(dstSplit.getParents().get(0));
             if (dstSplit.hasSecondParent()) { // second parent
@@ -915,7 +915,8 @@ public class Repository {
             dstSplit = getCommitFromID(fromDst.remove());
         }
 
-        while (Objects.nonNull(curSplit.getParents())) {
+        while (Objects.nonNull(curSplit.getParents())
+                && !curSplit.getParents().isEmpty()) {
             fromCur.add(curSplit.getParents().get(0));
             if (curSplit.hasSecondParent()) {
                 fromCur.add(curSplit.getParents().get(1));
@@ -948,7 +949,7 @@ public class Repository {
         }
         StageArea stage = getStageArea();
         if (!stage.isClear()) {
-            message("Cannot merge: You have uncommitted changes.");
+            message("You have uncommitted changes.");
             System.exit(0);
         }
 

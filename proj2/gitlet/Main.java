@@ -65,7 +65,8 @@ public class Main {
                 } else if (args.length == 4 && args[2].equals("--")) {
                     Repository.checkoutFileFromCommit(args[1], args[3]);
                 } else {
-                    throw new GitletException("Incorrect operands.");
+                    message("Incorrect operands.");
+                    System.exit(0);
                 }
                 break;
             case "branch":
