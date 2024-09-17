@@ -46,8 +46,8 @@ public class Commit implements Serializable {
     private Map<String, String> blobIDs;
     /** The ID of this Commit. */
     private String ID;
-    /** The corresponding file record of this Commit in objects/commits directory. */
-    private File file;
+//    /** The corresponding file record of this Commit in objects/commits directory. */
+//    private File file;
     /** Whether this commit starts a branching. */
     private boolean branchFrom = false;
 
@@ -57,7 +57,7 @@ public class Commit implements Serializable {
         this.firstParent = firstParent;
         this.blobIDs = files;
         this.ID = generateID();
-        this.file = getObjectCommitFile(this.ID);
+        // this.file = getObjectCommitFile(this.ID);
     }
 
     /**
@@ -69,7 +69,7 @@ public class Commit implements Serializable {
         this.firstParent = "";
         this.blobIDs = new HashMap<>();
         this.ID = generateID();
-        this.file = getObjectCommitFile(this.ID);
+        // this.file = getObjectCommitFile(this.ID);
     }
 
     public String getID() {
@@ -117,9 +117,9 @@ public class Commit implements Serializable {
         this.ID = generateID();
     }
 
-    public void resetFile() {
-        this.file = getObjectCommitFile(this.ID);
-    }
+//    public void resetFile() {
+//        this.file = getObjectCommitFile(this.ID);
+//    }
 
     public boolean hasSecondParent() {
         return this.secondParent != null;
@@ -130,6 +130,6 @@ public class Commit implements Serializable {
      * Chain the commit node to its parents
      */
     public void save() {
-        saveObjectFile(this.file, this);
+        saveObjectFile(getObjectCommitFile(this.ID), this);
     }
 }

@@ -1037,7 +1037,7 @@ public class Repository {
         newCommit.setSecondParent(dstCommit.getID());
         modifyTrack(newCommit, stage);
         newCommit.recomputeID();
-        newCommit.resetFile();
+        // newCommit.resetFile();
         newCommit.save();
         //displayCommit(newCommit);
 
