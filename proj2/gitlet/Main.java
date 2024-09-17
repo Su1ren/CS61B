@@ -97,7 +97,8 @@ public class Main {
      */
     private static void validateArgs(String args[], int argNum) {
         if (args.length != argNum) {
-            throw new GitletException("Incorrect operands.");
+            message("Incorrect operands.");
+	    System.exit(0);
         }
     }
 }
