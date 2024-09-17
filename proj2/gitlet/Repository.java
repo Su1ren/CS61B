@@ -1027,24 +1027,24 @@ public class Repository {
      */
     private static void mergeCommit(Commit curCommit, Commit dstCommit, String branchName) {
         StageArea stage = getStageArea();
-//        List<String> parents = new ArrayList<>();
-//        parents.add(curCommit.getID());
-//        parents.add(dstCommit.getID());
         //displayCommit(getCurrentCommit());
-        setCurrentBranch(getCurrentBranchName());
         dstCommit.setBranchSplit(true);
         writeObject(join(COMMITS_DIR, dstCommit.getID()), dstCommit);
-
+        //displayCommit(getCurrentCommit());
         Commit newCommit = new Commit("Merged " + branchName
                 + " into " + getCurrentBranchName() + ".",
                 new Date(), curCommit.getID(), new HashMap<>());
         newCommit.setSecondParent(dstCommit.getID());
         modifyTrack(newCommit, stage);
         newCommit.recomputeID();
+        newCommit.resetFile();
         newCommit.save();
+        //displayCommit(newCommit);
 
         stage.clearStage();
         writeObject(STAGE_AREA, stage);
+        setCurrentBranch(getCurrentBranchName());
         setBranchHeadCommit(getCurrentBranchName(), newCommit.getID());
+        //displayCommit(getCurrentCommit());
     }
 }

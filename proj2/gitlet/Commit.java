@@ -117,6 +117,10 @@ public class Commit implements Serializable {
         this.ID = generateID();
     }
 
+    public void resetFile() {
+        this.file = getObjectCommitFile(this.ID);
+    }
+
     public boolean hasSecondParent() {
         return this.secondParent != null;
     }
